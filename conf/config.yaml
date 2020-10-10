@@ -1,0 +1,12 @@
+# @package _global_
+defaults:
+ - dataset: modelnet40
+ - model: pointnet_cls
+
+log:
+  dir: null
+  backup_code: true
+  save_ckpt: true
+  save_ckpt_every_n_epochs: 1
+  save_summary: true
+  save_summary_every_n_steps: 100

@@ -1,0 +1,6 @@
+# @package _group_
+name: modelnet40
+root_dir: datasets/modelnet40
+n_points: 4096
+n_classes: 40
+n_workers: all

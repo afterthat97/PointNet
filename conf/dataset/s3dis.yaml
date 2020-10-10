@@ -1,0 +1,11 @@
+# @package _group_
+name: s3dis
+root_dir: datasets/s3dis
+n_points: 4096
+n_classes: 13
+n_channels: 9
+test_area: 5
+sample_aug:
+  train: 4
+  test: 1
+n_workers: all

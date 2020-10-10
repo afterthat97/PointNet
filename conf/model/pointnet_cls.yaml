@@ -1,0 +1,12 @@
+# @package _group_
+name: PointNetCls
+resume_path: null
+batch_size: 64
+max_epochs: 200
+lr:
+  init_value: 0.1
+  momentum: 0.9
+  decay_rate: 0.1
+  decay_milestones: [50, 100, 150]
+weight_decay: 1e-4
+sync_batch_norm: false
