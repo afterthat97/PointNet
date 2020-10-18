@@ -30,9 +30,10 @@ class TrainWorker:
             logging.info('No CUDA device detected, using CPU for training')
         else:
             logging.info('Using GPU %d: %s' % (device.index, torch.cuda.get_device_name(device)))
-            dist.init_process_group('nccl', 'tcp://localhost:12345', world_size=self.n_gpus, rank=self.device.index)
-            self.cfgs.model.batch_size = int(self.cfgs.model.batch_size / self.n_gpus)
-            self.cfgs.dataset.n_workers = int(self.cfgs.dataset.n_workers / self.n_gpus)
+            if self.n_gpus > 1:
+                dist.init_process_group('nccl', 'tcp://localhost:12345', world_size=self.n_gpus, rank=self.device.index)
+                self.cfgs.model.batch_size = int(self.cfgs.model.batch_size / self.n_gpus)
+                self.cfgs.dataset.n_workers = int(self.cfgs.dataset.n_workers / self.n_gpus)
             cudnn.benchmark = True
             torch.cuda.set_device(self.device)
 
