@@ -71,6 +71,7 @@ class TrainWorker:
         # create model
         logging.info('Creating model: %s' % cfgs.model.name)
         self.model = model_factory(self.cfgs).to(device=self.device)
+        self.best_metrics = None
 
         # create auto mixed-precision scaler and optimizer
         self.amp_scaler = torch.cuda.amp.GradScaler()
@@ -136,12 +137,12 @@ class TrainWorker:
 
             if i % self.cfgs.log.save_summary_every_n_steps == 0:
                 curr_step = (self.curr_epoch - 1) * len(self.train_loader) + i
-                self.save_summary(self.model.get_summary(), curr_step, prefix='train/')
+                self.save_summary(self.model.get_metrics(), curr_step, prefix='train/')
 
     @torch.no_grad()
     def validate(self):
         self.ddp.eval()
-        epoch_summary = dict.fromkeys(self.model.get_summary().keys(), 0)
+        epoch_metrics = dict.fromkeys(self.model.get_metrics().keys(), 0)
 
         start_time = time.time()
         for i, (inputs, target) in enumerate(self.val_loader):
@@ -157,12 +158,16 @@ class TrainWorker:
             logging.info('S: [%d/%d] ' % (i + 1, len(self.val_loader)) +
                          '| %s, timing: %.2fs' % (self.model.get_log_string(), timing))
 
-            batch_summary = self.model.get_summary()
-            epoch_summary = {k: epoch_summary[k] + batch_summary[k] * inputs.size(0) for k in epoch_summary}
+            batch_metrics = self.model.get_metrics()
+            epoch_metrics = {k: epoch_metrics[k] + batch_metrics[k] * inputs.size(0) for k in epoch_metrics}
 
-        epoch_summary = {k: epoch_summary[k] / len(self.val_dataset) for k in epoch_summary}
-        logging.info('Statistics on validation set: %s' % self.model.get_log_string(epoch_summary))
-        self.save_summary(epoch_summary, self.curr_epoch * len(self.train_loader), prefix='val/')
+        epoch_metrics = {k: epoch_metrics[k] / len(self.val_dataset) for k in epoch_metrics}
+        logging.info('Statistics on validation set: %s' % self.model.get_log_string(epoch_metrics))
+        self.save_summary(epoch_metrics, self.curr_epoch * len(self.train_loader), prefix='val/')
+
+        if self.model.is_better(epoch_metrics, self.best_metrics):
+            self.best_metrics = epoch_metrics
+            self.save_ckpt('best.pt')
 
     def backup_code(self):
         if self.is_main and self.cfgs.log.backup_code:
@@ -180,18 +185,18 @@ class TrainWorker:
             for name in summary.keys():
                 self.summary_writer.add_scalar(prefix + name, summary[name], curr_step)
 
-    def save_ckpt(self):
+    def save_ckpt(self, filename=None):
         if self.is_main and self.cfgs.log.save_ckpt:
             ckpt_dir = os.path.join(self.cfgs.log.dir, 'ckpts')
             os.makedirs(ckpt_dir, exist_ok=True)
-            filename = os.path.join(ckpt_dir, 'epoch-%03d.pt' % self.curr_epoch)
-            logging.info('Saving checkpoint to %s' % filename)
+            filepath = os.path.join(ckpt_dir, filename or 'epoch-%03d.pt' % self.curr_epoch)
+            logging.info('Saving checkpoint to %s' % filepath)
             torch.save({
                 'epoch': self.curr_epoch,
                 'state_dict': self.model.state_dict(),
                 'optimizer': self.optimizer.state_dict(),
                 'lr_scheduler': self.lr_scheduler.state_dict()
-            }, filename)
+            }, filepath)
 
     def load_ckpt(self):
         if self.cfgs.model.resume_path is not None:

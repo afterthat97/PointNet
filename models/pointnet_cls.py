@@ -67,14 +67,20 @@ class PointNetCls(nn.Module):
     def get_accuracy(self):
         return self.acc
 
-    def get_summary(self):
+    def get_metrics(self):
         return {
             'cls_loss': self.cls_loss.item(),
             'reg_loss': self.reg_loss.item(),
             'acc': self.acc
         }
 
-    def get_log_string(self, summary=None):
-        if summary is None:
-            summary = self.get_summary()
-        return 'loss: %.2f, acc: %.1f%%' % (summary['cls_loss'] + summary['reg_loss'], summary['acc'])
+    def get_log_string(self, metrics=None):
+        if metrics is None:
+            metrics = self.get_metrics()
+        return 'loss: %.2f, acc: %.1f%%' % (metrics['cls_loss'] + metrics['reg_loss'], metrics['acc'])
+
+    @staticmethod
+    def is_better(curr_metrics, best_metrics):
+        if best_metrics is None:
+            return True
+        return curr_metrics['acc'] > best_metrics['acc']

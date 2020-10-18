@@ -56,7 +56,7 @@ class EvalWorker:
     @torch.no_grad()
     def eval_modelnet40(self):
         self.model.eval()
-        epoch_summary = dict.fromkeys(self.model.get_summary().keys(), 0)
+        epoch_metrics = dict.fromkeys(self.model.get_metrics().keys(), 0)
 
         logging.info('Loading test set from %s' % self.cfgs.dataset.root_dir)
         test_dataset = dataset_factory(self.cfgs, split='test')
@@ -69,12 +69,12 @@ class EvalWorker:
             with torch.cuda.amp.autocast():
                 self.model.forward(inputs, target)
 
-            batch_summary = self.model.get_summary()
-            epoch_summary = {k: epoch_summary[k] + batch_summary[k] * inputs.size(0) for k in epoch_summary}
+            batch_metrics = self.model.get_metrics()
+            epoch_metrics = {k: epoch_metrics[k] + batch_metrics[k] * inputs.size(0) for k in epoch_metrics}
             logging.info('S: [%d/%d] | %s' % (i + 1, len(test_loader), self.model.get_log_string()))
 
-        epoch_summary = {k: epoch_summary[k] / len(test_dataset) for k in epoch_summary}
-        logging.info('Statistics on test set: %s' % self.model.get_log_string(epoch_summary))
+        epoch_metrics = {k: epoch_metrics[k] / len(test_dataset) for k in epoch_metrics}
+        logging.info('Statistics on test set: %s' % self.model.get_log_string(epoch_metrics))
 
     @torch.no_grad()
     def eval_s3dis(self):
