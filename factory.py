@@ -10,15 +10,15 @@ def dataset_factory(cfgs: DictConfig, split):
         return ModelNet40(
             dataset_dir=cfgs.dataset.root_dir,
             split=split,
-            n_points=cfgs.dataset.n_points
-        )
+            n_points=cfgs.dataset.n_points)
     elif cfgs.dataset.name == 's3dis':
         return S3DIS(
             dataset_dir=cfgs.dataset.root_dir,
             split=split,
             test_area=cfgs.dataset.test_area,
             n_points=cfgs.dataset.n_points,
-            sample_aug=cfgs.dataset.sample_aug[split]
+            block_type=cfgs.dataset.block_type,
+            block_size=cfgs.dataset.block_size
         )
     else:
         raise NotImplementedError('Unknown dataset: %s' % cfgs.dataset.name)

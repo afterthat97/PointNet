@@ -2,11 +2,11 @@
 name: PointNetSeg
 resume_path: null
 batch_size: 64
-max_epochs: 200
+max_epochs: 30
 lr:
   init_value: 0.1
   momentum: 0.9
   decay_rate: 0.1
-  decay_milestones: [50, 100, 150]
+  decay_milestones: [10, 20]
 weight_decay: 1e-4
 sync_batch_norm: false

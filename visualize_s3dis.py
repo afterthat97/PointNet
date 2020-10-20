@@ -17,7 +17,9 @@ def main():
         dataset_dir=cfgs.root_dir,
         split='test',
         test_area=cfgs.test_area,
-        n_points=cfgs.n_points
+        n_points=cfgs.n_points,
+        block_type=cfgs.block_type,
+        block_size=cfgs.block_size
     )
 
     logging.info('Dataset length: %d' % len(dataset))
