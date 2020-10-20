@@ -2,30 +2,29 @@ import os
 import glob
 import hydra
 import utils
-import open3d
 import logging
 import torch
 import torch.backends.cudnn as cudnn
 import numpy as np
-from s3dis import get_block
+from s3dis import prepare_input as prepare_s3dis_input
 from omegaconf import DictConfig
 from factory import dataset_factory, model_factory
 
 
 class2color = {  # for visualization
+    'clutter': [50, 50, 50],
     'ceiling': [0, 255, 0],
     'floor': [0, 0, 255],
     'wall': [0, 255, 255],
     'beam': [255, 255, 0],
     'column': [255, 0, 255],
-    'window': [100, 100, 255],
     'door': [200, 200, 100],
+    'window': [100, 100, 255],
     'table': [170, 120, 200],
     'chair': [255, 0, 0],
     'sofa': [200, 100, 100],
     'bookcase': [10, 200, 100],
     'board': [200, 200, 200],
-    'clutter': [50, 50, 50]
 }
 label2color = np.array(list(class2color.values()))
 
@@ -79,56 +78,44 @@ class EvalWorker:
     @torch.no_grad()
     def eval_s3dis(self):
         self.model.eval()
-        area_pred, area_gt = [], []
 
-        dataset_dir = self.cfgs.dataset.root_dir
-        area_dir = os.path.join(dataset_dir, 'Area_%d' % self.cfgs.dataset.test_area)
-        room_paths = glob.glob(os.path.join(area_dir, '*.npz'))
         logging.info('Evaluating on S3DIS (Area_%d)...' % self.cfgs.dataset.test_area)
+        area_dir = os.path.join(self.cfgs.dataset.root_dir, 'Area_%d' % self.cfgs.dataset.test_area)
+        room_names = [r for r in os.listdir(area_dir) if os.path.isdir(os.path.join(area_dir, r))]
 
-        for idx, room_path in enumerate(room_paths):
-            room_name = os.path.basename(room_path).split('.')[0]
-            logging.info('[%d/%d] Processing %s' % (idx + 1, len(room_paths), room_name))
+        area_pred, area_gt = [], []
+        for idx, room_name in enumerate(sorted(room_names)):
+            n_points = np.load(os.path.join(area_dir, '%s.npz' % room_name))['n_points']
+            room_xyz, room_pred, room_gt = np.zeros([n_points, 3], np.float32), np.zeros([n_points], int), np.zeros([n_points], int)
 
-            room = np.load(room_path)
-            room_xyz, room_rgb, room_gt = room['xyz'], room['rgb'], room['gt']
-            room_pred = np.ones_like(room_gt) * -1
+            for block_path in glob.glob(os.path.join(area_dir, room_name, 'block_zero_*.npz')):
+                data = np.load(block_path)
+                block_xyz, block_rgb, block_gt = data['block_xyz'], data['block_rgb'], data['block_gt']
+                block_size, room_xyz_max, room2block_indices = data['block_size'], data['room_xyz_max'], data['indices']
 
-            xyz_max = np.amax(room_xyz, axis=0)
-            for i in range(int(np.ceil(xyz_max[0])) + 1):
-                for j in range(int(np.ceil(xyz_max[1])) + 1):
-                    indices, block_data, block_gt = get_block(room_xyz, room_rgb, room_gt, xyz_max, i, j, 'all')
-                    if indices.shape[0] == 0:
-                        continue
+                xcenter, ycenter = np.amin(block_xyz, axis=0)[:2] + block_size / 2
+                block_data = prepare_s3dis_input(block_xyz, block_rgb, xcenter, ycenter, room_xyz_max)
 
-                    inputs = torch.tensor([block_data.astype(np.float32)], device=self.device)
-                    target = torch.tensor([block_gt.astype(np.int64)], device=self.device)
+                block2split_indices = utils.argsplit(len(block_data), self.cfgs.dataset.n_points)
+                for i in range(0, len(block2split_indices), self.cfgs.model.batch_size):
+                    block2batch_indices = block2split_indices[i:i+self.cfgs.model.batch_size]
+                    inputs = torch.tensor(block_data[block2batch_indices].transpose(0, 2, 1), device=self.device)
+                    batch_pred = torch.argmax(self.model.forward(inputs), dim=1).cpu().numpy()
 
-                    with torch.cuda.amp.autocast():
-                        outputs = self.model.forward(inputs, target)
-
-                    block_acc = self.model.get_accuracy()
-                    room_pred[indices] = torch.argmax(outputs, dim=1).cpu()
-                    logging.info('Block (%d, %d): n_points = %d, acc = %.2f' % (i, j, len(indices), block_acc))
-
-            # points out of range are regarded as `clutter`
-            room_gt[room_pred < 0] = len(label2color) - 1
-            room_pred[room_pred < 0] = len(label2color) - 1
-            area_pred.append(room_pred)
-            area_gt.append(room_gt)
+                    room2batch_indices = room2block_indices[block2batch_indices.reshape([-1])]
+                    room_xyz[room2batch_indices] = block_xyz[block2batch_indices.reshape([-1])]
+                    room_pred[room2batch_indices] = batch_pred.reshape([-1])
+                    room_gt[room2batch_indices] = block_gt[block2batch_indices.reshape([-1])]
 
             room_acc = 100.0 * np.equal(room_pred, room_gt).sum() / len(room_gt)
-            logging.info('Room %s: n_points = %d, acc = %.2f' % (room_name, len(room_gt), room_acc))
+            area_pred, area_gt = np.hstack([area_pred, room_pred]), np.hstack([area_gt, room_gt])
+            logging.info('[%d/%d] %s: acc = %.2f%%' % (idx + 1, len(room_names), room_name, room_acc))
 
-            # save predicted results to *.ply
-            pcloud_o3d = open3d.geometry.PointCloud()
-            pcloud_o3d.points = open3d.utility.Vector3dVector(room_xyz)
-            pcloud_o3d.colors = open3d.utility.Vector3dVector(label2color[room_pred] / 255.0)
-            filename = os.path.join(self.cfgs.log.dir, '%s.ply' % room_name)
-            open3d.io.write_point_cloud(filename, pcloud_o3d)
-            logging.info('Visualized point cloud saved to %s' % filename)
+            if 'visualize' in self.cfgs:
+                filepath = os.path.join(self.cfgs.log.dir, '%s.ply' % room_name)
+                utils.save_ply(filepath, room_xyz, label2color[room_pred] / 255.0)
+                logging.info('Visualized result is saved to %s' % filepath)
 
-        area_pred, area_gt = np.concatenate(area_pred), np.concatenate(area_gt)
         area_acc = 100.0 * np.equal(area_pred, area_gt).sum() / len(area_gt)
         ious = utils.get_ious(area_pred, area_gt, len(class2color))
         logging.info('Area %d: OA = %.2f, mIoU = %.2f' % (self.cfgs.dataset.test_area, area_acc, np.average(ious)))
@@ -136,6 +123,7 @@ class EvalWorker:
             logging.info('IoU for class %s:\t%.2f' % (list(class2color.keys())[i], ious[i]))
 
     def load_ckpt(self):
+        assert self.cfgs.model.resume_path is not None
         logging.info('Loading checkpoint from %s' % self.cfgs.model.resume_path)
         checkpoint = torch.load(self.cfgs.model.resume_path, self.device)
         self.model.load_state_dict(checkpoint['state_dict'])
