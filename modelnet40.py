@@ -23,12 +23,14 @@ def random_jitter_pcloud(pcloud, sigma=0.01):
 
 
 class ModelNet40(torch.utils.data.Dataset):
-    def __init__(self, dataset_dir, split, n_points):
+    def __init__(self, dataset_dir, split, n_points, random_rotate=False, random_jitter=False):
         assert os.path.isdir(dataset_dir)
         assert split == 'train' or split == 'test'
         self.dataset_dir = dataset_dir
         self.split = split
         self.n_points = n_points
+        self.random_rotate = random_rotate
+        self.random_jitter = random_jitter
         self.class_dict = self._load_class_dict()
         self.model_indices = self._load_model_indices()
 
@@ -66,8 +68,10 @@ class ModelNet40(torch.utils.data.Dataset):
         if self.split == 'train':
             indices = np.random.choice(xyz.shape[0], self.n_points)
             xyz = xyz[indices, :]
-            xyz = random_rotate_pcloud(xyz)
-            xyz = random_jitter_pcloud(xyz)
+            if self.random_rotate:
+                xyz = random_rotate_pcloud(xyz)
+            if self.random_jitter:
+                xyz = random_jitter_pcloud(xyz)
         else:
             xyz = xyz[:self.n_points, :]
 

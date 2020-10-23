@@ -10,7 +10,10 @@ def dataset_factory(cfgs: DictConfig, split):
         return ModelNet40(
             dataset_dir=cfgs.dataset.root_dir,
             split=split,
-            n_points=cfgs.dataset.n_points)
+            n_points=cfgs.dataset.n_points,
+            random_rotate=cfgs.dataset.random_rotate,
+            random_jitter=cfgs.dataset.random_jitter
+        )
     elif cfgs.dataset.name == 's3dis':
         return S3DIS(
             dataset_dir=cfgs.dataset.root_dir,
