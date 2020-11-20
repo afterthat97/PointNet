@@ -1,12 +1,5 @@
-# @package _group_
-name: PointNetSeg
-resume_path: null
-batch_size: 64
-max_epochs: 30
-lr:
-  init_value: 0.1
-  momentum: 0.9
-  decay_rate: 0.1
-  decay_milestones: [10, 20]
-weight_decay: 1e-4
-sync_batch_norm: false
+# @package _global_
+model:
+  name: PointNetSeg
+  resume_path: null
+  batch_size: 128

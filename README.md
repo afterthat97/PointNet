@@ -120,7 +120,7 @@ python train.py -m model=pointnet_seg dataset=s3dis dataset.test_area=6,1,2,3,4,
 python eval.py dataset=modelnet40 model=pointnet_cls model.resume_path=path-to-ckpt/best.pt
 ```
 
-评估指标为 Top-1 Accuracy。使用默认参数训练得到的精度为 86.3%，相比原文的 89.2% 还有差距，需要改进。
+评估指标为 Top-1 Accuracy。使用默认参数训练得到的精度为 88.6%，相比原文的 89.2% 略有差距。
 
 ### S3DIS
 
@@ -134,8 +134,8 @@ python eval.py dataset=s3dis dataset.test_area=5 model=pointnet_seg model.resume
 
 | Metrics | Area1 | Area2 | Area3 | Area4 | Area5 | Area6 |
 | ------- | ----- | ----- | ----- | ----- | ----- | ----- |
-| OA      | 84.15 | 72.93 | 86.15 | 79.05 | 81.01 | 88.37 |
-| mIoU    | 59.95 | 32.95 | 61.86 | 43.65 | 45.76 | 70.34 |
+| OA      | 84.49 | 71.10 | 86.55 | 78.62 | 80.61 | 88.41 |
+| mIoU    | 60.68 | 35.76 | 62.99 | 44.09 | 45.63 | 68.99 |
 
 此外，在执行 `eval.py` 时如果追加 `+visualize=` 参数，可以将语义分割的可视化结果（`.ply` 格式）存放到对应的日志目录下，使用 MeshLab 即可查看。
 
@@ -189,3 +189,4 @@ python train.py -m model=pointnet_seg dataset=s3dis dataset.test_area=6,1,2,3,4,
 | 1.5        | 57.67 | 33.57 | 59.58 | 41.08 | 43.66 | 65.16 |
 
 由此可见，随着 Block 大小的增加，模型性能出现显著下降。
+

@@ -1,10 +1,11 @@
-# @package _group_
-name: s3dis
-root_dir: datasets/s3dis
-n_points: 4096
-n_classes: 13
-n_channels: 9
-n_workers: all
-test_area: 5
-block_type: static
-block_size: 1.0
+# @package _global_
+dataset:
+  name: s3dis
+  root_dir: datasets/s3dis
+  n_points: 4096
+  n_classes: 13
+  n_channels: 9
+  n_workers: all
+  test_area: 5
+  block_type: static
+  block_size: 1.0

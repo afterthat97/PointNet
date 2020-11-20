@@ -1,3 +1,4 @@
+import torch
 from omegaconf import DictConfig
 from modelnet40 import ModelNet40
 from s3dis import S3DIS
@@ -36,3 +37,57 @@ def model_factory(cfgs: DictConfig):
         return PointNetSeg(cfgs.dataset.n_classes, cfgs.dataset.n_channels)
     else:
         raise NotImplementedError('Unknown model: %s' % cfgs.model.name)
+
+
+def optimizer_factory(cfgs: DictConfig, params):
+    if cfgs.training.optimizer == 'adam':
+        optimizer = torch.optim.Adam(
+            params=params,
+            lr=cfgs.training.lr.init_value,
+            weight_decay=cfgs.training.weight_decay
+        )
+    elif cfgs.training.optimizer == 'adagrad':
+        optimizer = torch.optim.Adagrad(
+            params=params,
+            lr=cfgs.training.lr.init_value,
+            weight_decay=cfgs.training.weight_decay
+        )
+    elif cfgs.training.optimizer == 'adadelta':
+        optimizer = torch.optim.Adadelta(
+            params=params,
+            lr=cfgs.training.lr.init_value,
+            weight_decay=cfgs.training.weight_decay
+        )
+    elif cfgs.training.optimizer == 'rmsprop':
+        optimizer = torch.optim.RMSprop(
+            params=params,
+            lr=cfgs.training.lr.init_value,
+            momentum=cfgs.training.lr.momentum,
+            weight_decay=cfgs.training.weight_decay
+        )
+    elif cfgs.training.optimizer == 'sgd':
+        optimizer = torch.optim.SGD(
+            params=params,
+            lr=cfgs.training.lr.init_value,
+            momentum=cfgs.training.lr.momentum,
+            weight_decay=cfgs.training.weight_decay
+        )
+    else:
+        raise NotImplementedError('Unknown optimizer: %s' % cfgs.training.optimizer)
+
+    if isinstance(cfgs.training.lr.decay_milestones, list):
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer=optimizer,
+            milestones=cfgs.training.lr.decay_milestones,
+            gamma=cfgs.training.lr.decay_rate
+        )
+    elif isinstance(cfgs.training.lr.decay_milestones, int):
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer=optimizer,
+            step_size=cfgs.training.lr.decay_milestones,
+            gamma=cfgs.training.lr.decay_rate
+        )
+    else:
+        raise TypeError('Invalid type of training.lr.decay_milestones')
+
+    return optimizer, lr_scheduler

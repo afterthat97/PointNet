@@ -1,8 +1,9 @@
-# @package _group_
-name: modelnet40
-root_dir: datasets/modelnet40
-n_points: 1024
-n_classes: 40
-n_workers: all
-random_rotate: false
-random_jitter: false
+# @package _global_
+dataset:
+  name: modelnet40
+  root_dir: datasets/modelnet40
+  n_points: 1024
+  n_classes: 40
+  n_workers: all
+  random_rotate: false
+  random_jitter: false

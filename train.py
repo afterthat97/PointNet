@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 from omegaconf import DictConfig, OmegaConf
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
-from factory import dataset_factory, model_factory
+from factory import dataset_factory, model_factory, optimizer_factory
 
 
 class TrainWorker:
@@ -68,34 +68,17 @@ class TrainWorker:
             pin_memory=True
         )
 
-        # create model
         logging.info('Creating model: %s' % cfgs.model.name)
         self.model = model_factory(self.cfgs).to(device=self.device)
+        self.ddp = DDP(self.model, [self.device.index]) if self.n_gpus > 1 else self.model
         self.best_metrics = None
 
-        # create auto mixed-precision scaler and optimizer
+        logging.info('Creating optimizer: %s' % self.cfgs.training.optimizer)
+        self.optimizer, self.lr_scheduler = optimizer_factory(self.cfgs, self.model.parameters())
         self.amp_scaler = torch.cuda.amp.GradScaler()
-        self.optimizer = torch.optim.SGD(
-            params=self.model.parameters(),
-            lr=self.cfgs.model.lr.init_value,
-            momentum=self.cfgs.model.lr.momentum,
-            weight_decay=self.cfgs.model.weight_decay
-        )
-
-        # distributed training
-        if self.cfgs.model.sync_batch_norm:
-            self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
-        self.ddp = DDP(self.model, [self.device.index]) if self.n_gpus > 1 else self.model
-
-        # create learning rate scheduler
-        self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer=self.optimizer,
-            milestones=self.cfgs.model.lr.decay_milestones,
-            gamma=self.cfgs.model.lr.decay_rate
-        )
 
     def run(self):
-        while self.curr_epoch <= self.cfgs.model.max_epochs:
+        while self.curr_epoch <= self.cfgs.training.max_epochs:
             if self.train_sampler is not None:
                 self.train_sampler.set_epoch(self.curr_epoch)
 
@@ -131,7 +114,7 @@ class TrainWorker:
             timing = time.time() - start_time
             start_time = time.time()
 
-            logging.info('E: [%d/%d] ' % (self.curr_epoch, self.cfgs.model.max_epochs) +
+            logging.info('E: [%d/%d] ' % (self.curr_epoch, self.cfgs.training.max_epochs) +
                          'S: [%d/%d] ' % (i + 1, len(self.train_loader)) +
                          '| %s, timing: %.2fs' % (self.model.get_log_string(), timing))
 

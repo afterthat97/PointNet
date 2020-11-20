@@ -1,7 +1,8 @@
 # @package _global_
 defaults:
- - dataset: modelnet40
- - model: pointnet_cls
+ - model: ???
+ - dataset: ???
+ - training: ${defaults.0.model}/${defaults.1.dataset}
 
 log:
   dir: null
