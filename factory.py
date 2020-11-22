@@ -75,19 +75,17 @@ def optimizer_factory(cfgs: DictConfig, params):
     else:
         raise NotImplementedError('Unknown optimizer: %s' % cfgs.training.optimizer)
 
-    if isinstance(cfgs.training.lr.decay_milestones, list):
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer=optimizer,
-            milestones=cfgs.training.lr.decay_milestones,
-            gamma=cfgs.training.lr.decay_rate
-        )
-    elif isinstance(cfgs.training.lr.decay_milestones, int):
+    if isinstance(cfgs.training.lr.decay_milestones, int):
         lr_scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer=optimizer,
             step_size=cfgs.training.lr.decay_milestones,
             gamma=cfgs.training.lr.decay_rate
         )
     else:
-        raise TypeError('Invalid type of training.lr.decay_milestones')
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer=optimizer,
+            milestones=cfgs.training.lr.decay_milestones,
+            gamma=cfgs.training.lr.decay_rate
+        )
 
     return optimizer, lr_scheduler
