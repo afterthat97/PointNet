@@ -19,7 +19,7 @@ def main():
     with open('conf/dataset/s3dis.yaml') as f:
         cfgs = DictConfig(yaml.load(f, Loader=yaml.FullLoader))
 
-    area_dir = os.path.join(cfgs.root_dir, 'Area_1')
+    area_dir = os.path.join(cfgs.dataset.root_dir, 'Area_1')
     for room_name in sorted(os.listdir(area_dir)):
         if not os.path.isdir(os.path.join(area_dir, room_name)):
             continue

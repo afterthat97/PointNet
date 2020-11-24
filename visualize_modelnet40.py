@@ -14,9 +14,9 @@ def main():
         cfgs = DictConfig(yaml.load(f, Loader=yaml.FullLoader))
 
     dataset = ModelNet40(
-        dataset_dir=cfgs.root_dir,
+        dataset_dir=cfgs.dataset.root_dir,
         split='train',
-        n_points=cfgs.n_points
+        n_points=cfgs.dataset.n_points
     )
 
     for xyz, class_id in dataset:

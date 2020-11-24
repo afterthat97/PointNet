@@ -14,12 +14,12 @@ def main():
         cfgs = DictConfig(yaml.load(f, Loader=yaml.FullLoader))
 
     dataset = S3DIS(
-        dataset_dir=cfgs.root_dir,
+        dataset_dir=cfgs.dataset.root_dir,
         split='test',
-        test_area=cfgs.test_area,
-        n_points=cfgs.n_points,
-        block_type=cfgs.block_type,
-        block_size=cfgs.block_size
+        test_area=cfgs.dataset.test_area,
+        n_points=cfgs.dataset.n_points,
+        block_type=cfgs.dataset.block_type,
+        block_size=cfgs.dataset.block_size
     )
 
     logging.info('Dataset length: %d' % len(dataset))
