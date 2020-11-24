@@ -2,7 +2,7 @@ import torch
 from omegaconf import DictConfig
 from modelnet40 import ModelNet40
 from s3dis import S3DIS
-from models import PointNetCls, PointNetSeg
+from models import PointNetCls, PointNetSeg, PointNet2Cls, PointNet2Seg
 
 
 def dataset_factory(cfgs: DictConfig, split):
@@ -30,12 +30,14 @@ def dataset_factory(cfgs: DictConfig, split):
 
 
 def model_factory(cfgs: DictConfig):
-    if cfgs.model.name == 'PointNetCls':
-        assert cfgs.dataset.name == 'modelnet40'
+    if cfgs.model.name == 'pointnet_cls':
         return PointNetCls(cfgs.dataset.n_classes)
-    elif cfgs.model.name == 'PointNetSeg':
-        assert cfgs.dataset.name == 's3dis'
-        return PointNetSeg(cfgs.dataset.n_classes, cfgs.dataset.n_channels)
+    elif cfgs.model.name == 'pointnet_seg':
+        return PointNetSeg(cfgs.dataset.n_classes, cfgs.dataset.n_features)
+    elif cfgs.model.name == 'pointnet2_cls':
+        return PointNet2Cls(cfgs.dataset.n_classes, cfgs.model)
+    elif cfgs.model.name == 'pointnet2_seg_ssg' or cfgs.model.name == 'pointnet2_seg_msg':
+        return PointNet2Seg(cfgs.dataset.n_classes, cfgs.dataset.n_features, cfgs.model)
     else:
         raise NotImplementedError('Unknown model: %s' % cfgs.model.name)
 

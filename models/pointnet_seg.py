@@ -6,10 +6,10 @@ from .pointnet_cls import calc_cls_loss, calc_accuracy
 
 
 class PointNetSeg(nn.Module):
-    def __init__(self, n_classes, n_channels):
+    def __init__(self, n_classes, n_features):
         super().__init__()
 
-        self.base = PointNetBase(n_channels, input_trans=False, feat_trans=False)
+        self.base = PointNetBase(n_channels=3 + n_features)
 
         self.conv1 = nn.Conv1d(1024 + 64, 512, 1)
         self.conv2 = nn.Conv1d(512, 256, 1)
@@ -26,7 +26,7 @@ class PointNetSeg(nn.Module):
 
     def forward(self, inputs, target=None):
         """
-        :param inputs: [batch_size, n_channels, n_points]
+        :param inputs: [batch_size, 3 + n_features, n_points]
         :param target: [batch_size, n_points]
         :return: outputs: [batch_size, n_classes, n_points]
         """

@@ -4,7 +4,7 @@ dataset:
   root_dir: datasets/s3dis
   n_points: 4096
   n_classes: 13
-  n_channels: 9
+  n_features: 6
   n_workers: all
   test_area: 5
   max_dropout: 0.95

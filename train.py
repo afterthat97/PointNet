@@ -60,12 +60,15 @@ class TrainWorker:
         )
         logging.info('Loading test set from %s' % self.cfgs.dataset.root_dir)
         self.val_dataset = dataset_factory(self.cfgs, split='test')
+        self.val_sampler = torch.utils.data.distributed.DistributedSampler(
+            self.val_dataset) if self.n_gpus > 1 else None
         self.val_loader = utils.FastDataLoader(
             dataset=self.val_dataset,
             batch_size=self.cfgs.model.batch_size,
             shuffle=False,
             num_workers=self.cfgs.dataset.n_workers,
-            pin_memory=True
+            pin_memory=True,
+            sampler=self.val_sampler
         )
 
         logging.info('Creating model: %s' % cfgs.model.name)
@@ -144,7 +147,8 @@ class TrainWorker:
             batch_metrics = self.model.get_metrics()
             epoch_metrics = {k: epoch_metrics[k] + batch_metrics[k] * inputs.size(0) for k in epoch_metrics}
 
-        epoch_metrics = {k: epoch_metrics[k] / len(self.val_dataset) for k in epoch_metrics}
+        epoch_metrics = {k: utils.dist_reduce_sum(epoch_metrics[k], self.n_gpus) / len(self.val_dataset)
+                         for k in epoch_metrics}
         logging.info('Statistics on validation set: %s' % self.model.get_log_string(epoch_metrics))
         self.save_summary(epoch_metrics, self.curr_epoch * len(self.train_loader), prefix='val/')
 

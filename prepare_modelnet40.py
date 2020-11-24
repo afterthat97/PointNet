@@ -10,7 +10,7 @@ from utils import init_logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--zip_path', required=True, help='Path to modelnet40_normal_resampled.zip')
-parser.add_argument('--tmp_dir', required=False, default='tmp')
+parser.add_argument('--tmp_dir', required=False, default='tmp-modelnet40')
 parser.add_argument('--out_dir', required=False, default='datasets')
 args = parser.parse_args()
 
@@ -31,20 +31,20 @@ def load_txt(txt_path):
 
 
 def main():
-    init_logging()
-    shutil.rmtree(args.tmp_dir, ignore_errors=True)
-
-    # Unzip modelnet40_normal_resampled.zip
-    logging.info('Unzipping %s' % args.zip_path)
-    with ZipFile(args.zip_path, 'r') as zip_file:
-        os.makedirs(args.tmp_dir, exist_ok=True)
-        zip_file.extractall(path=args.tmp_dir)
-
-    # Convert dataset from `.txt` to `.npz`
     input_dir = os.path.join(args.tmp_dir, 'modelnet40_normal_resampled')
     output_dir = os.path.join(args.out_dir, 'modelnet40')
+
+    if os.path.isdir(input_dir):
+        logging.info('Found the temporary files of the last run, skip unzipping...')
+    else:
+        logging.info('Unzipping %s' % args.zip_path)
+        with ZipFile(args.zip_path, 'r') as zip_file:
+            os.makedirs(args.tmp_dir, exist_ok=True)
+            zip_file.extractall(path=args.tmp_dir)
+
+    # Convert dataset from `.txt` to `.npz`
     for shape_name in load_shape_names(input_dir):
-        os.makedirs(os.path.join(output_dir, shape_name))
+        os.makedirs(os.path.join(output_dir, shape_name), exist_ok=True)
         for txt_path in glob.glob(os.path.join(input_dir, shape_name, '*.txt')):
             model_idx = os.path.basename(txt_path).split('.')[0]
             output_path = os.path.join(output_dir, shape_name, '%s.npz' % model_idx)
@@ -57,10 +57,8 @@ def main():
         logging.info('Copying %s -> %s' % (txt_path, output_dir))
         shutil.copy2(txt_path, output_dir)
 
-    # Clean
-    logging.info('Cleaning...')
-    shutil.rmtree(args.tmp_dir)
-
 
 if __name__ == '__main__':
+    init_logging()
     main()
+    logging.info('All done.')
