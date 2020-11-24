@@ -7,5 +7,6 @@ dataset:
   n_channels: 9
   n_workers: all
   test_area: 5
+  max_dropout: 0.95
   block_type: static
   block_size: 1.0

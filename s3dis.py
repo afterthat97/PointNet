@@ -17,10 +17,19 @@ def prepare_input(block_xyz, block_rgb, xcenter, ycenter, room_xyz_max):
     return block_data
 
 
+def random_dropout(indices, max_dropout=0.95):
+    dropout = np.random.random() * max_dropout  # 0 ~ max_dropout
+    drop_idx = np.where(np.random.random(len(indices)) < dropout)[0]
+    if len(drop_idx) > 0:
+        indices[drop_idx] = indices[0]  # set to the first point
+    return indices
+
+
 class _S3disStatic(torch.utils.data.Dataset):
-    def __init__(self, dataset_dir, area_ids, n_points=4096, offset_name=''):
+    def __init__(self, dataset_dir, area_ids, n_points, max_dropout, offset_name=''):
         super().__init__()
         self.n_points = n_points
+        self.max_dropout = max_dropout
         self.block_paths = []
 
         for area_id in area_ids:
@@ -42,17 +51,19 @@ class _S3disStatic(torch.utils.data.Dataset):
         xcenter, ycenter = np.amin(block_xyz, axis=0)[:2] + block_size / 2
         block_data = prepare_input(block_xyz, block_rgb, xcenter, ycenter, room_xyz_max)
 
-        choices = np.random.choice(len(block_xyz), self.n_points, len(block_xyz) < self.n_points)
-        block_data = block_data[choices].transpose()  # [n_channels, n_points]
-        block_gt = block_gt[choices]
+        indices = np.random.choice(len(block_xyz), self.n_points, len(block_xyz) < self.n_points)
+        indices = random_dropout(indices, self.max_dropout)
+
+        block_data = block_data[indices].transpose()  # [n_channels, n_points]
+        block_gt = block_gt[indices]
 
         return block_data.astype(np.float32), block_gt.astype(np.int64)
 
 
 class _S3disDynamic(torch.utils.data.Dataset):
-    def __init__(self, dataset_dir, area_ids, n_points=4096, block_size=1.0, sample_aug=1):
+    def __init__(self, dataset_dir, area_ids, n_points, max_dropout, block_size=1.0, sample_aug=1):
         super().__init__()
-        self.n_points, self.block_size = n_points, block_size
+        self.n_points, self.max_dropout, self.block_size = n_points, max_dropout, block_size
         self.rooms, self.indices = [], []
 
         for area_id in area_ids:
@@ -76,8 +87,9 @@ class _S3disDynamic(torch.utils.data.Dataset):
 
         xcenter, ycenter = room_xyz[np.random.choice(room_xyz.shape[0])][:2]
         indices = self._get_block_indices(room_xyz, xcenter, ycenter)
-        block_xyz, block_rgb, block_gt = room_xyz[indices], room_rgb[indices], room_gt[indices]
+        indices = random_dropout(indices, self.max_dropout)
 
+        block_xyz, block_rgb, block_gt = room_xyz[indices], room_rgb[indices], room_gt[indices]
         block_data = prepare_input(block_xyz, block_rgb, xcenter, ycenter, room_xyz_max)
         block_data = np.transpose(block_data)  # [n_channels, n_points]
 
@@ -96,12 +108,13 @@ class _S3disDynamic(torch.utils.data.Dataset):
 
 
 class S3DIS(torch.utils.data.Dataset):
-    def __init__(self, dataset_dir, split, test_area, n_points=4096, block_type='dynamic', block_size=1.0):
+    def __init__(self, dataset_dir, split, test_area, n_points, max_dropout, block_type='dynamic', block_size=1.0):
         super().__init__()
 
         assert os.path.isdir(dataset_dir)
         assert split == 'train' or split == 'test'
         assert type(test_area) == int and 1 <= test_area <= 6
+        assert 0 <= max_dropout <= 1
 
         area_ids = []
         for area_id in range(1, 7):
@@ -113,10 +126,10 @@ class S3DIS(torch.utils.data.Dataset):
 
         if block_type == 'static':
             offset_name = 'zero' if split == 'test' else ''
-            self.dataset = _S3disStatic(dataset_dir, area_ids, n_points, offset_name)
+            self.dataset = _S3disStatic(dataset_dir, area_ids, n_points, max_dropout, offset_name)
         elif block_type == 'dynamic':
             sample_aug = 1 if split == 'test' else 2
-            self.dataset = _S3disDynamic(dataset_dir, area_ids, n_points, block_size, sample_aug)
+            self.dataset = _S3disDynamic(dataset_dir, area_ids, n_points, max_dropout, block_size, sample_aug)
         else:
             raise NotImplementedError('Unknown block type: %s' % block_type)
 

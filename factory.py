@@ -21,6 +21,7 @@ def dataset_factory(cfgs: DictConfig, split):
             split=split,
             test_area=cfgs.dataset.test_area,
             n_points=cfgs.dataset.n_points,
+            max_dropout=cfgs.dataset.max_dropout,
             block_type=cfgs.dataset.block_type,
             block_size=cfgs.dataset.block_size
         )
