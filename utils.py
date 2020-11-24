@@ -6,6 +6,7 @@ import logging
 import colorsys
 import numpy as np
 import torch.utils.data
+import torch.distributed as dist
 
 
 class _RepeatSampler(object):
@@ -79,6 +80,14 @@ def gen_random_colors(num, bright=True):
     colors = [np.array(color, np.float32) for color in colors]
     random.shuffle(colors)
     return colors
+
+
+def dist_reduce_sum(value, n_gpus):
+    if n_gpus == 1:
+        return value
+    tensor = torch.Tensor([value]).cuda()
+    dist.all_reduce(tensor)
+    return tensor.item()
 
 
 def get_ious(pred, target, n_classes):

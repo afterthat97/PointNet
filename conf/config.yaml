@@ -1,8 +1,8 @@
 # @package _global_
 defaults:
- - model: ???
  - dataset: ???
- - training: ${defaults.0.model}/${defaults.1.dataset}
+ - model: ???
+ - training: ${defaults.0.dataset}/${defaults.1.model}
 
 log:
   dir: null

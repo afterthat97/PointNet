@@ -1,6 +1,9 @@
-# PyTorch implementation of PointNet
+# PyTorch implementation of PointNet and PointNet++
 
-本项目包含了对论文 PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation 的复现（基于 PyTorch），支持点云分类、点云语义分割两种任务。
+本项目包含了对以下论文的复现（基于 PyTorch），支持点云分类、点云语义分割两种任务：
+
+* PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation
+* PointNet++: Deep Hierarchical Feature Learning on Point Sets in a Metric Space
 
 ## 特点
 
@@ -77,21 +80,43 @@ python prepare_s3dis.py --zip_path Stanford3dDataset_v1.2_Aligned_Version.zip
 * `visualize_s3dis_block.py`：可视化每个 Room，通过不同颜色来展示 Block 划分结果
 * `visualize_s3dis_room.py`：可视化每个 Room，对比原始点云和均匀重采样后的结果
 
+## 编译 CUDA 代码
+
+PointNet++ 模型所使用的 Furthest Point Sampling, Ball Query, K-NN 等算法，使用朴素的 PyTorch 实现可能效率不佳。本项目提供了上述几种算法的 CUDA C++ 实现，并支持以扩展的形式集成进 PyTorch。
+
+进入目录 `models/pointnet2_utils`，并执行 `setup.py` 以编译：
+
+```
+cd models/pointnet2_utils
+python setup.py build_ext --inplace
+```
+
 ## 训练
 
-### 训练点云分割模型（使用 ModelNet-40 数据集）
+### 训练点云分类模型（使用 ModelNet-40 数据集）
 
-执行 `train.py`，并指定数据集和模型：
+对于分类任务，有两个模型可供选择：
+
+* `pointnet_cls`：对应 PointNet
+* `pointnet2_cls`：对应 PointNet++
+
+执行 `train.py`，并指定数据集和模型。以 PointNet 为例：
 
 ```
-python train.py model=pointnet_cls dataset=modelnet40
+python train.py model=pointnet_cls dataset=modelnet40  # PointNet
 ```
 
-> ModelNet-40 的数据预处理不太复杂，指定 4~8 workers 即可。
+> ModelNet-40 的数据预处理不太复杂，指定 2~4 workers 即可。
 
 ### 训练点云语义分割模型（使用 S3DIS 数据集）
 
-执行 `train.py`，并指定数据集和模型：
+对于语义分割任务，有三个模型可供选择：
+
+* `pointnet_seg`：对应 PointNet
+* `pointnet2_seg_ssg`：对应 PoinNet++ (Single-scale Grouping)
+* `pointnet2_seg_msg`：对应 PointNet++ (Multi-scale Grouping)
+
+执行 `train.py`，并指定数据集和模型。以 PointNet 为例：
 
 ```
 python train.py model=pointnet_seg dataset=s3dis
@@ -120,7 +145,7 @@ python train.py -m model=pointnet_seg dataset=s3dis dataset.test_area=6,1,2,3,4,
 python eval.py dataset=modelnet40 model=pointnet_cls model.resume_path=path-to-ckpt/best.pt
 ```
 
-评估指标为 Top-1 Accuracy。使用默认参数训练得到的精度为 88.6%，相比原文的 89.2% 略有差距。
+评估指标为 Top-1 Accuracy。
 
 ### S3DIS
 
@@ -130,12 +155,7 @@ python eval.py dataset=modelnet40 model=pointnet_cls model.resume_path=path-to-c
 python eval.py dataset=s3dis dataset.test_area=5 model=pointnet_seg model.resume_path=path-to-ckpt/best.pt
 ```
 
-评估指标包括 OA (Overall Accuracy) 和 mIoU (Mean IoU)，其中后者更常用。使用默认参数训练得到的精度如下：
-
-| Metrics | Area1 | Area2 | Area3 | Area4 | Area5 | Area6 |
-| ------- | ----- | ----- | ----- | ----- | ----- | ----- |
-| OA      | 84.49 | 71.10 | 86.55 | 78.62 | 80.61 | 88.41 |
-| mIoU    | 60.68 | 35.76 | 62.99 | 44.09 | 45.63 | 68.99 |
+评估指标包括 OA (Overall Accuracy) 和 mIoU (Mean IoU)，其中后者更常用。
 
 此外，在执行 `eval.py` 时如果追加 `+visualize=` 参数，可以将语义分割的可视化结果（`.ply` 格式）存放到对应的日志目录下，使用 MeshLab 即可查看。
 

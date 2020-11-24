@@ -1,0 +1,10 @@
+# @package _global_
+training:
+  max_epochs: 300
+  optimizer: sgd
+  lr:
+    init_value: 0.1
+    momentum: 0.9
+    decay_rate: 0.1
+    decay_milestones: [100, 200, 250]
+  weight_decay: 1e-4

@@ -1,5 +1,5 @@
 # @package _global_
 model:
-  name: PointNetCls
+  name: pointnet_cls
   resume_path: null
   batch_size: 128

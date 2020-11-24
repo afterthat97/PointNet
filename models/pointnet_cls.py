@@ -47,12 +47,12 @@ class PointNetCls(nn.Module):
         end_points = self.base(inputs)
 
         # mlp(512, 256, n_classes)
-        inputs = end_points['global_feat']
-        inputs = F.relu(self.bn1(self.fc1(inputs)))  # [bs, 512]
-        inputs = F.dropout(inputs, p=0.5, training=self.training)
-        inputs = F.relu(self.bn2(self.fc2(inputs)))  # [bs, 256]
-        inputs = F.dropout(inputs, p=0.5, training=self.training)
-        outputs = self.fc3(inputs)  # [bs, n_classes]
+        features = end_points['global_feat']
+        features = F.relu(self.bn1(self.fc1(features)))  # [bs, 512]
+        features = F.dropout(features, p=0.5, training=self.training)
+        features = F.relu(self.bn2(self.fc2(features)))  # [bs, 256]
+        features = F.dropout(features, p=0.5, training=self.training)
+        outputs = self.fc3(features)  # [bs, n_classes]
 
         if target is not None:
             self.cls_loss = calc_cls_loss(outputs, target)

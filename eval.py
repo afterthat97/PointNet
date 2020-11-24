@@ -85,6 +85,7 @@ class EvalWorker:
 
         area_pred, area_gt = [], []
         for idx, room_name in enumerate(sorted(room_names)):
+            torch.cuda.empty_cache()
             n_points = np.load(os.path.join(area_dir, '%s.npz' % room_name))['n_points']
             room_xyz, room_pred, room_gt = np.zeros([n_points, 3], np.float32), np.zeros([n_points], int), np.zeros([n_points], int)
 
@@ -120,7 +121,7 @@ class EvalWorker:
         ious = utils.get_ious(area_pred, area_gt, len(class2color))
         logging.info('Area %d: OA = %.2f, mIoU = %.2f' % (self.cfgs.dataset.test_area, area_acc, np.average(ious)))
         for i in range(len(class2color)):
-            logging.info('IoU for class %s:\t%.2f' % (list(class2color.keys())[i], ious[i]))
+            logging.info('IoU for class %-9s %.2f' % (list(class2color.keys())[i] + ':', ious[i]))
 
     def load_ckpt(self):
         assert self.cfgs.model.resume_path is not None
