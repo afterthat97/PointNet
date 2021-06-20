@@ -172,3 +172,41 @@ cd outputs/2020-09-28/11-26-49
 ```
 tensorboard --bind_all --logdir .
 ```
+
+## Ablation Study
+
+### S3DIS：不同 Block 划分方式下的训练效果对比
+
+第一组实验（静态划分）：
+
+```
+python train.py -m model=pointnet_seg dataset=s3dis dataset.test_area=6,1,2,3,4,5 dataset.block_type=static
+```
+
+第二组实验（动态划分）：
+
+```
+python train.py -m model=pointnet_seg dataset=s3dis dataset.test_area=6,1,2,3,4,5 dataset.block_type=dynamic
+```
+
+两组实验，仅划分方式不同，其余参数全部一致。测试精度如下表所示（指标为 mIoU ）：
+
+> 该实验结果已过期。
+> | Block Type | Area1 | Area2 | Area3 | Area4 | Area5 | Area6 |
+> | ---------- | ----- | ----- | ----- | ----- | ----- | ----- |
+> | Dynamic    | 59.84 | 32.28 | 61.21 | 43.52 | 44.45 | 69.25 |
+> | Static     | 59.95 | 32.95 | 61.86 | 43.65 | 45.76 | 70.34 |
+
+由此可见，两种划分方式区别不大，静态划分略优（也许是因为更好的划分、归并策略）。
+
+### S3DIS：不同 Block 大小的训练效果对比
+
+在执行 `prepare_s3dis.py` 时，分别指定 `--block_size`  为 0.5、1.0、1.5，从而得到 3 个数据集。在这三个数据集上依次训练 PointNet、PointNet++ (SSG)、PointNet++ (MSG) 模型，并在对应的数据集上进行测试。在 Area5，测试精度（mIoU）如下表所示：
+
+| Block Size | PointNet | PointNet++ (SSG) | PointNet++ (MSG) |
+| ---------- | -------- | ---------------- | ---------------- |
+| 0.5        | **46.41** | 53.57 | 54.50 |
+| 1.0        | 44.77 | **56.50** | **55.65** |
+| 1.5        | 42.02 | 54.83 | 52.29 |
+
+由此可见，对于 PointNet 而言，随着 Block 大小的增加，模型性能出现显著下降；但是对于 PointNet++ 而言，Block Size = 1.0 似乎是最好的选择，这也正是目前大家普遍采用的方案。
