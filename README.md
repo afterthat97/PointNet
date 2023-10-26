@@ -1,9 +1,13 @@
 # PyTorch implementation of PointNet and PointNet++
 
-本项目包含了对以下论文的复现（基于 PyTorch），支持点云分类、点云语义分割两种任务：
+本项目包含了我在博士生生涯早期对以下论文的复现（基于 PyTorch），支持点云分类、点云语义分割两种任务：
 
 * PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation
 * PointNet++: Deep Hierarchical Feature Learning on Point Sets in a Metric Space
+
+> Comment on 2023-10:
+> 
+> 这个 Codebase 已经很老了，仅具有纪念收藏价值，本人不对其中的代码问题负责。
 
 ## 特点
 
@@ -210,3 +214,15 @@ python train.py -m model=pointnet_seg dataset=s3dis dataset.test_area=6,1,2,3,4,
 | 1.5        | 42.02 | 54.83 | 52.29 |
 
 由此可见，对于 PointNet 而言，随着 Block 大小的增加，模型性能出现显著下降；但是对于 PointNet++ 而言，Block Size = 1.0 似乎是最好的选择，这也正是目前大家普遍采用的方案。
+
+## 致谢
+
+我参考了许多开源项目，包括但不限于：
+
+* https://github.com/charlesq34/pointnet
+* https://github.com/charlesq34/pointnet2
+* https://github.com/fxia22/pointnet.pytorch
+* https://github.com/yanx27/Pointnet_Pointnet2_pytorch
+* https://github.com/erikwijmans/Pointnet2_PyTorch
+
+在此表示感谢！
